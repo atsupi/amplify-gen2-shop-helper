@@ -1,0 +1,46 @@
+# === Node.js & Package Managers ===
+node_modules/
+/npm-debug.log*
+/yarn-to-pnpm.yaml
+/yarn-error.log*
+/.pnpm-debug.log*
+
+# === Vite & Frontend Build Artifacts ===
+dist/
+dist-ssr/
+*.local
+.env
+.env.*.local
+
+# === TypeScript & IDEs ===
+*.tsbuildinfo
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# === AWS Amplify Gen2 Specifics ===
+# 各環境やサンドボックスごとに自動生成されるフロントエンド接続設定（認証情報の漏洩防止）
+amplify_outputs.json
+amplify_outputs.ts
+amplify_outputs.mjs
+amplify_outputs.dart
+amplify_configuration.json
+aws-exports.js
+
+# ローカルでのサンドボックス実行時の一時キャッシュやログインセッション情報
+.amplify/
+
+# === AWS CDK (Cloud Development Kit) ===
+# バックエンドのCloudFormationテンプレート合成時の出力
+.cdk.staging/
+cdk.out/
+
+# === OS & System Files ===
+.DS_Store
+Thumbs.db
+Thumbs.db:encryptable
+Ehthumbs.db
