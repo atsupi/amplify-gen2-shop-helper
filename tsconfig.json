@@ -20,5 +20,9 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "amplify"]
+  "include": [
+    "src", 
+    "amplify",
+    "src/vite-env.d.ts"
+  ]
 }
