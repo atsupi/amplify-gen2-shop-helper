@@ -15,11 +15,11 @@ frontend:
       commands:
         - nvm use 22
         - export NPM_CONFIG_LEGACY_PEER_DEPS=true
-        # 👇 --ignore-scripts を追加して、裏でのビルドフリーズを完全に防止します
         - npm install --cache .npm --prefer-offline --ignore-scripts
     build:
       commands:
-        # 👇 フロントエンドのビルド時のみ、ビルドに必要なスクリプトを実行できるようにします
+        # Viteのビルドでメモリ不足によるハングを防ぐための安全策
+        - export NODE_OPTIONS="--max-old-space-size=4096"
         - npm run build
   artifacts:
     baseDirectory: dist
