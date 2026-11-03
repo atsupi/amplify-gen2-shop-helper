@@ -1,0 +1,31 @@
+version: 1
+backend:
+  phases:
+    # 👇 バックエンドのビルド前に環境を Node.js v22 に固定します
+    preBuild:
+      commands:
+        - nvm use 22 || nvm install 22
+    build:
+      commands:
+        # 👇 環境変数レベルで peer-deps チェックを緩和し、競合による無限ループを強制停止させます
+        - export NPM_CONFIG_LEGACY_PEER_DEPS=true
+        - npm install --cache .npm --prefer-offline
+        - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
+frontend:
+  phases:
+    preBuild:
+      commands:
+        # 👇 フロントエンド側も一貫して Node.js v22 を使用します
+        - nvm use 22
+        - export NPM_CONFIG_LEGACY_PEER_DEPS=true
+        - npm install --cache .npm --prefer-offline
+    build:
+      commands:
+        - npm run build
+  artifacts:
+    baseDirectory: dist
+    files:
+      - '**/*'
+  cache:
+    paths:
+      - .npm/**/*
