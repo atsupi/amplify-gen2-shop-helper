@@ -44,3 +44,5 @@ cdk.out/
 Thumbs.db
 Thumbs.db:encryptable
 Ehthumbs.db
+
+tmp/
