@@ -1,103 +1,94 @@
-import { API, Storage, graphqlOperation } from "aws-amplify";
-import { listPurchaseTables, 
-         getPurchaseTable, 
-         purchaseTableByType, 
-         purchaseTableByIsInCart } from "./graphql/queries";
-import { updatePurchaseTable } from "./graphql/mutations";
-import { PurchaseData, UpdateItemValue, UpdatePurchaseItemValue } from "./types";
+import { generateClient } from 'aws-amplify/api';
+import { getUrl } from 'aws-amplify/storage';
+import { type Schema } from '../amplify/data/resource'; // 💡 resource.tsの絶対/相対パスを環境に合わせて調整してください
 
-export async function getPresignedUrl(key: any) {
-  const presignedUrl = await Storage.get(key, { level: "public" });
-  return presignedUrl;
+// クライアントの生成
+const client = generateClient<Schema>();
+
+// Gen2でのデータの型定義の取得方法
+export type PurchaseData = Schema['PurchaseTable']['type'];
+
+// プレサインドURLの取得（Storage.get から getUrl へ移行）
+export async function getPresignedUrl(key: string) {
+  // Gen2のデフォルト（guestアクセス想定の場合は明示的に指定）
+  const result = await getUrl({
+    path: `public/${key}`, // Gen2ではpathを用いたアプローチが推奨されます
+    options: {
+      validateObjectExistence: false,
+    }
+  });
+  return result.url.toString();
 }
 
-export type getListReturnValue = {
-  data: { listPurchaseTables: { items: PurchaseData[]; } }
-}
-export const getList = async (nextToken = null): Promise<getListReturnValue> => {
-  const res: Promise<getListReturnValue> = <Promise<getListReturnValue>>await API.graphql(
-    graphqlOperation(listPurchaseTables, {
-      nextToken: nextToken,
-    })
-  );
-  return res;
+// データの全件取得 (リスト)
+export const getList = async (nextToken: string | null = null) => {
+  const { data, errors } = await client.models.PurchaseTable.list({
+    nextToken: nextToken ?? undefined,
+  });
+  if (errors) throw new Error(JSON.stringify(errors));
+  return { data: { listPurchaseTables: { items: data } } };
 };
 
-export type fetchItemReturnValue = {
-  data: { getPurchaseTable: PurchaseData }
-}
-
-export const fetchItem = async (PK: string, SK: string): Promise<fetchItemReturnValue> => {
-  const res: Promise<fetchItemReturnValue> =
-    <Promise<fetchItemReturnValue>>await API.graphql(
-      graphqlOperation(getPurchaseTable, { PK: PK, SK: SK })
-    );
-  return res;
+// 複合主キー（PK, SK）による1件取得
+export const fetchItem = async (PK: string, SK: string) => {
+  const { data, errors } = await client.models.PurchaseTable.get({
+    PK: PK,
+    SK: SK,
+  });
+  if (errors) throw new Error(JSON.stringify(errors));
+  return { data: { getPurchaseTable: data } };
 };
 
-export type listItemsReturnValue = {
-  data: { purchaseTableByType: { items: Array<PurchaseData> } }
-}
-
-export const listItems = async (type: string): Promise<listItemsReturnValue> => {
-  const res: Promise<listItemsReturnValue> =
-    <Promise<listItemsReturnValue>>await API.graphql(
-      graphqlOperation(purchaseTableByType, { type: type })
-    );
-  return res;
+// インデックス（byType）を利用したクエリ取得
+export const listItems = async (type: string) => {
+  const { data, errors } = await client.models.PurchaseTable.purchaseTableByType({
+    type: type,
+  });
+  if (errors) throw new Error(JSON.stringify(errors));
+  return { data: { purchaseTableByType: { items: data } } };
 };
 
-export type listPurchaseItemsReturnValue = {
-  data: { listPurchaseTables: { items: Array<PurchaseData> } }
-}
-
-export const listPurchaseItems = async (PK: string): Promise<listPurchaseItemsReturnValue> => {
-  const res: Promise<listPurchaseItemsReturnValue> = 
-    <Promise<listPurchaseItemsReturnValue>>await API.graphql(
-      graphqlOperation(listPurchaseTables, { PK: PK }
-    )
-  );
-  return res;
-}
-
-export type listItemsInCartReturnValue = {
-  data: { purchaseTableByIsInCart: { items: Array<PurchaseData> } }
-}
-
-export const listItemsInCart = async (): Promise<listItemsInCartReturnValue> => {
-  const res: Promise<listItemsInCartReturnValue> =
-    <Promise<listItemsInCartReturnValue>>await API.graphql(
-      graphqlOperation(purchaseTableByIsInCart, { isInCart: 1 })
-    );
-  return res;
+// 複合キーのPK側のみで絞り込むリスト取得
+export const listPurchaseItems = async (PK: string) => {
+  const { data, errors } = await client.models.PurchaseTable.list({
+    filter: {
+      PK: { eq: PK }
+    }
+  });
+  if (errors) throw new Error(JSON.stringify(errors));
+  return { data: { listPurchaseTables: { items: data } } };
 };
 
-export async function updateItemStatus(item: UpdateItemValue) {
+// インデックス（byIsInCart）を利用したカート内アイテムのクエリ取得
+export const listItemsInCart = async () => {
+  const { data, errors } = await client.models.PurchaseTable.purchaseTableByIsInCart({
+    isInCart: 1,
+  });
+  if (errors) throw new Error(JSON.stringify(errors));
+  return { data: { purchaseTableByIsInCart: { items: data } } };
+};
+
+// ステータス更新（部分的な更新）
+export async function updateItemStatus(item: Partial<PurchaseData> & { PK: string; SK: string }) {
   try {
-    const res = await API.graphql(
-      graphqlOperation(updatePurchaseTable, { input: item })
-    );
-    console.log(res);
+    const { data, errors } = await client.models.PurchaseTable.update(item);
+    if (errors) throw new Error(JSON.stringify(errors));
+    console.log(data);
   } catch (event) {
     console.log(event);
   }
 }
 
-export const fetchPurchases = async (): Promise<getListReturnValue> => {
-  const res: Promise<getListReturnValue> =
-    <Promise<getListReturnValue>>await API.graphql(
-      graphqlOperation(listPurchaseTables)
-    );
-  return res;
+// データ取得（fetchPurchases）
+export const fetchPurchases = async () => {
+  const { data, errors } = await client.models.PurchaseTable.list();
+  if (errors) throw new Error(JSON.stringify(errors));
+  return { data: { listPurchaseTables: { items: data } } };
 };
 
-export const mutatePurchase = async (targetPurchase: UpdatePurchaseItemValue) => {
-  const res = await API.graphql(
-    graphqlOperation(updatePurchaseTable, {
-      PK: targetPurchase.PK,
-      SK: targetPurchase.SK,
-      input: targetPurchase,
-    })
-  );
-  return res;
+// 明示的な更新メソッド
+export const mutatePurchase = async (targetPurchase: Partial<PurchaseData> & { PK: string; SK: string }) => {
+  const { data, errors } = await client.models.PurchaseTable.update(targetPurchase);
+  if (errors) throw new Error(JSON.stringify(errors));
+  return { data: targetPurchase };
 };

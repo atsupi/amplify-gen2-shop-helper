@@ -1,54 +1,61 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, ChangeEvent } from "react";
 import PaginateItems from "../components/PaginateItems";
 import { Button } from "@aws-amplify/ui-react";
-import { PurchaseData } from "../types";
 import "./Shop.css";
 import { Link } from "react-router-dom";
-import { listItems, listItemsReturnValue } from "../Utils";
-import { onCreatePurchaseTable } from "../graphql/subscriptions";
-import Observable from "zen-observable-ts";
-import { API } from "aws-amplify";
+import { listItems } from "../Utils";
+import { generateClient } from "aws-amplify/api";
+import { type Schema } from "../../amplify/data/resource"; // 💡 パスは環境に合わせて調整してください
+
+// クライアントの生成
+const client = generateClient<Schema>();
+
+// Gen2データ型の定義
+type PurchaseData = Schema['PurchaseTable']['type'];
 
 function Shop() {
-  const [itemList, setItemList] = useState(Array<PurchaseData>);
+  const [itemList, setItemList] = useState<PurchaseData[]>([]);
   const [numberOfItems, setNumberOfItems] = useState(0);
 
   useEffect(() => {
-    listItems("item").then((res: listItemsReturnValue) => {
-      const items: Array<PurchaseData> = res.data.purchaseTableByType.items;
-      setItemList(items);
-      items.map((item) => {
-        if (item.isInCart) {
-          setNumberOfItems((number) => number + 1);
-        }
-      });
+    // 1. カート内アイテム数と商品リストの初期ロード
+    const fetchShopItems = async () => {
+      try {
+        const res = await listItems("item");
+        const items = res.data.purchaseTableByType.items;
+        setItemList(items);
+
+        // カートに入っているアイテム数を集計
+        const cartCount = items.filter(item => item.isInCart === 1).length;
+        setNumberOfItems(cartCount);
+      } catch (error) {
+        console.error("Error fetching shop items:", error);
+      }
+    };
+
+    fetchShopItems();
+
+    // 2. Gen2のリアルタイムサブスクリプション (onCreate) 設定
+    const subscription = client.models.PurchaseTable.onCreate().subscribe({
+      next: (event) => {
+        console.log("New item created via subscription:", event);
+        // 必要に応じてここで setItemList などを更新するロジックを追加できます
+      },
+      error: (error) => console.error("Subscription error:", error),
     });
-    let sub: Observable<object>;
-    let subscriptions: any;
-    try {
-      sub = API.graphql({ query: onCreatePurchaseTable }) as Observable<object>;
-      if ("subscribe" in sub) {
-        subscriptions = sub.subscribe({
-          next: (event: {value: {data: any}}) => console.log(event.value.data.onCreatePurchaseTable),
-          error: (error) => console.log(error),
-        });
-      }
-    } catch (event) {
-      console.log(event);
-    }
+
+    // クリーンアップ関数で購読を解除
     return () => {
-      if ('unsubscribe' in subscriptions) {
-        subscriptions.unsubscribe();
-      }
-    }
+      subscription.unsubscribe();
+    };
   }, []);
 
   const OpenCart = () => {
     console.log("OpenCart clicked");
   };
 
-  const onChangeChild = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event?.target.checked) {
+  const onChangeChild = (event: ChangeEvent<HTMLInputElement>) => {
+    if (event.target.checked) {
       setNumberOfItems((number) => number + 1);
     } else {
       setNumberOfItems((number) => number - 1);
@@ -66,7 +73,7 @@ function Shop() {
         <div className="ShopItemList">
           <PaginateItems
             itemsPerPage={4}
-            items={itemList}
+            items={itemList as any}
             onChange={onChangeChild}
           />
         </div>
