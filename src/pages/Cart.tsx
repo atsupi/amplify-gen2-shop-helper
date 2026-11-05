@@ -2,7 +2,7 @@ import "./Cart.css";
 import { useUser } from "../hooks/useUser";
 import { useEffect, useState } from "react";
 import { generateClient } from "aws-amplify/api";
-import { type Schema } from "../../amplify/data/resource"; // 💡 パスは環境に合わせて調整してください
+import { type Schema } from "../../amplify/data/resource"; 
 import { Button } from "@aws-amplify/ui-react";
 import CartItem from "../components/CartItem";
 import {
@@ -11,16 +11,15 @@ import {
   updateItemStatus,
 } from "../Utils";
 
-// クライアントの生成
 const client = generateClient<Schema>();
 
-// type（型エイリアス）と交差型（&）を使用する
 type ExtendedCartItem = Schema['PurchaseTable']['type'] & {
   index: number;
 };
 
 function Cart() {
   const [itemList, setItemList] = useState<ExtendedCartItem[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false); // 💡 連打・二重送信防止用
   const { username } = useUser();
 
   useEffect(() => {
@@ -53,52 +52,66 @@ function Cart() {
   }, [username]);
 
   const onSubmit = async () => {
-    if (itemList.length < 1) return;
+    if (itemList.length < 1 || isSubmitting) return;
 
+    setIsSubmitting(true); // 送信ロック
     const purId = new Date().getTime().toString();
     const newPurchase = {
       PK: "purchase#" + purId,
       SK: "#meta#" + purId,
       type: "purchase",
       username: username || "unknown",
+      price: 0, // 👈 親レコード自体が価格を持たない（または0）ことを明示
     };
 
     try {
       // 1. 親となる購入レコードの作成
       const purchaseResult = await client.models.PurchaseTable.create(newPurchase);
       if (purchaseResult.errors) throw new Error(JSON.stringify(purchaseResult.errors));
-      console.log("Purchase record created:", purchaseResult.data);
 
-      // 2. カート内アイテムの紐付けレコード作成 (Promise.all で並行処理)
+      // 2. 明細作成とフラグ更新
       const childPromises = itemList.map(async (item) => {
-        const value = {
+        // 💡 修正：まず元の商品のカートフラグを確実にオフにする
+        const updateItemValue = {
+          PK: item.PK,
+          SK: item.SK,
+          isInCart: 0,       
+          isPurchased: 0,
+        };
+        await client.models.PurchaseTable.update(updateItemValue);
+
+        // その後、購入明細レコードを作成する
+        const pitemValue = {
           PK: "purchase#" + purId,
           SK: item.PK,
           type: "pitem",
           username: username || "unknown",
-          isPurchased: 0,
+          isPurchased: 0, 
           price: item.price ?? 0,
         };
-        const itemResult = await client.models.PurchaseTable.create(value);
+        const itemResult = await client.models.PurchaseTable.create(pitemValue);
         if (itemResult.errors) throw new Error(JSON.stringify(itemResult.errors));
+
         return itemResult.data;
       });
 
       await Promise.all(childPromises);
-      console.log("All purchase items registered successfully.");
+      console.log("All purchase items and inventory states updated successfully.");
       
-      // 必要に応じて決済完了後の画面遷移やカートのクリア処理をここに記述します
+      // 画面上のカートリストを空にする
+      setItemList([]);
+      alert("Purchase completed!");
     } catch (error) {
       console.error("Checkout submission error:", error);
+    } finally {
+      setIsSubmitting(false); // ロック解除
     }
   };
 
   const onDeleteChild = async (props: { PK: string; SK: string }) => {
-    // 画面上のリストから即時除外
     setItemList((prevList) => prevList.filter((item) => item.PK !== props.PK));
 
     try {
-      // 指定アイテムを取得してインカートフラグを落とす
       const res = await fetchItem(props.PK, props.SK);
       const curItem = res.data.getPurchaseTable;
 
@@ -123,8 +136,8 @@ function Cart() {
   return (
     <>
       <div className="Cart_div">
-        <Button onClick={onSubmit} disabled={itemList.length < 1}>
-          Submit
+        <Button onClick={onSubmit} disabled={itemList.length < 1 || isSubmitting}>
+          {isSubmitting ? "Submitting..." : "Submit"}
         </Button>
         <div className="CartItemList">
           {itemList.map((item) => {

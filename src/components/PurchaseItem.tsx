@@ -21,6 +21,8 @@ function PurchaseItem(props: Props) {
 
   useEffect(() => {
     let temp_completed = 1;
+    let calculatedTotalPrice = 0; // 💡 価格集計用のローカル変数を用意
+
     listPurchaseItems(purchaseIndex.PK || "").then(
       (res: listPurchaseItemsReturnValue) => {
         const itemId = res.data.listPurchaseTables.items[1].SK?.split("#")[1];
@@ -33,13 +35,21 @@ function PurchaseItem(props: Props) {
             });
           })
           .catch((err) => console.log(err));
+
         const items: Array<PurchaseData> = res.data.listPurchaseTables.items;
-        items.map((item) => {
-          setTotalPrice((totalPrice) => totalPrice + item.price);
+        
+        items.forEach((item) => {
+          // 💡 修正点: 明細レコード（type: "pitem"）のときだけ価格を合計する
+          if (item.type === "pitem") {
+            calculatedTotalPrice += item.price;
+          }
+          
           if (item.isPurchased === 0) {
             temp_completed = 0;
           }
         });
+
+        setTotalPrice(calculatedTotalPrice); // 💡 最後にまとめてStateを更新
         setCompleted(temp_completed);
         setNumberOfItems(items.length - 1);
       }
