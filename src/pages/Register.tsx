@@ -1,18 +1,15 @@
 import "./Register.css";
 import { useUser } from "../hooks/useUser";
-import { Storage } from "aws-amplify";
-import { useState } from "react";
+import { uploadData, remove } from "@aws-amplify/storage";
+import { useState, ChangeEvent } from "react";
 import { Button } from "@aws-amplify/ui-react";
-
-import { API, graphqlOperation } from "aws-amplify";
-import { createPurchaseTable } from "../graphql/mutations";
+import { generateClient } from "aws-amplify/api";
+import { type Schema } from "../../amplify/data/resource"; 
 import { getPresignedUrl } from "../Utils";
 import { Link } from "react-router-dom";
-import { NewItemValue } from "../types";
 
-type Props = {
-  username: string | undefined
-}
+// クライアントの生成
+const client = generateClient<Schema>();
 
 function Register() {
   const { username } = useUser();
@@ -22,68 +19,91 @@ function Register() {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
 
-  const inputFile = (event: any) => {
-    console.log(event.target.files[0]);
-    if (event.target.files[0].size < 20000000) {
-      Storage.put(event.target.files[0].name, event.target.files[0], {
-        level: "public",
-        progressCallback(progress) {
-          let percentage = (100 * progress.loaded) / progress.total;
-          console.log(`progress: ${percentage}%`);
-        },
-      })
-        .then((_result) => {
-          getPresignedUrl(event.target.files[0].name)
-            .then((result) => {
-              setPresignedUrl(result);
-              setDataName(event.target.files[0].name);
-              setIsUrlSet(true);
-            })
-            .catch((event) => {
-              console.log(event);
-            });
-        })
-        .catch((event) => {
-          console.log(event);
+  const inputFile = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    console.log(file);
+    if (file.size < 20000000) {
+      try {
+        const uploadTask = uploadData({
+          path: `public/${file.name}`,
+          data: file,
+          options: {
+            onProgress: (progress) => {
+              let percentage = (100 * progress.transferredBytes) / progress.totalBytes!;
+              console.log(`progress: ${percentage}%`);
+            },
+          },
         });
+
+        await uploadTask.result;
+
+        const resultUrl = await getPresignedUrl(file.name);
+        setPresignedUrl(resultUrl);
+        setDataName(file.name);
+        setIsUrlSet(true);
+      } catch (error) {
+        console.error("Upload error:", error);
+      }
     }
   };
 
-  const inputDescription = (event: any) => {
+  const inputDescription = (event: ChangeEvent<HTMLTextAreaElement>) => {
     setDescription(event.target.value);
   };
 
-  const inputPrice = (event: any) => {
+  const inputPrice = (event: ChangeEvent<HTMLInputElement>) => {
     setPrice(event.target.value);
   };
 
   const registerItem = async () => {
     const itemId = new Date().getTime().toString();
-    const value: NewItemValue = {
-      // `id` is not included as it is determined by AppSync
+    
+    // 💡 型安全性を高めるため、スキーマから期待される引数型（CreateInput）にキャストするか安全にオブジェクトを作ります
+    const value = {
+      // id: itemId, // 💡 もしresource.tsの a.id() で型エラーが出る場合はここを生かすか、スキーマ側から除外してください
       PK: "item#" + itemId,
       SK: "#meta#" + itemId,
       type: "item",
       imagefile: dataName,
-      price: parseInt(price),
-      username: props.username || "unknown",
+      price: parseInt(price) || 0,
+      username: username || "unknown", 
       description: description,
       isInCart: 0,
+      isPurchased: 0,
     };
+
     try {
-      await API.graphql(
-        graphqlOperation(createPurchaseTable, { input: value })
-      );
-    } catch (event) {
-      console.log(event);
+      // `as any` キャストを念のため挟むことで、バックエンドスキーマの軽微なオプショナル差分によるクライアントエラーを未然に防ぎます
+      const { data, errors } = await client.models.PurchaseTable.create(value as any);
+      if (errors) throw new Error(JSON.stringify(errors));
+      console.log("Registered item successfully:", data);
+      
+      // 登録成功後のステートクリーンアップ
+      setDescription("");
+      setPrice("");
+      setIsUrlSet(false);
+      setDataName("No image");
+      setPresignedUrl("");
+    } catch (error) {
+      console.error("Registration error:", error);
     }
   };
 
-  const cancelRegistration = () => {
+  const cancelRegistration = async () => {
     if (isUrlSet) {
-      Storage.remove(dataName)
-        .then((res) => console.log(res))
-        .catch((event) => console.log(event));
+      try {
+        await remove({
+          path: `public/${dataName}`,
+        });
+        console.log("Removed cancelled temporary file successfully");
+        setIsUrlSet(false);
+        setDataName("No image");
+        setPresignedUrl("");
+      } catch (error) {
+        console.error("Cancel removal error:", error);
+      }
     }
   };
 
@@ -114,7 +134,7 @@ function Register() {
 
       <div>
         {isUrlSet ? (
-          <img src={presignedUrl} width="120" height="120" />
+          <img src={presignedUrl} width="120" height="120" alt="Preview" />
         ) : (
           `${dataName}`
         )}

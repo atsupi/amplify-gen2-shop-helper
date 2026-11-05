@@ -74,3 +74,11 @@ amplify-gen2-shop-helper/
 ├── vite.config.ts            # Vite 8 / @vitejs/plugin-react の設定
 └── tsconfig.json             # TypeScript コンパイル・JSXランタイムの設定
 ```
+
+## 認証
+
+💡 移行のポイント
+
+- 複合プライマリキー: Gen1の @primaryKey(sortKeyFields: ["SK"]) は、Gen2ではモデルに対して .identifier(['PK', 'SK']) をチェインすることで同一の挙動になります。
+- インデックス (GSI): @index は、.secondaryIndexes() 内に配列でまとめて定義します。name や queryField もそのままマッピング可能です。
+- 認証ルール (guest): デフォルトの認証モードが userPool になっているため、Gen1の allow: public を再現するには .authorization() 内で allow.guest() を指定します。また、これに伴い defineData 側に apiKeyAuthorizationMode などのパブリック用認証設定が必要になります。
