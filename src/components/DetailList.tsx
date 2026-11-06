@@ -35,7 +35,7 @@ function DetailList(props: Props) {
               const itemId = itemSK.split("#")[1];
               fetchItem("item#" + itemId, "#meta#" + itemId).then(
                 (res: fetchItemReturnValue) => {
-                  const newItem: PurchaseData = res.data.getPurchaseTable;
+                  const newItem: PurchaseData = { ...res.data.getPurchaseTable, id: res.data.getPurchaseTable.id?? "", imagefile: res.data.getPurchaseTable.imagefile?? "", username: res.data.getPurchaseTable.username?? "", description: res.data.getPurchaseTable.description?? "", price: res.data.getPurchaseTable.price?? 0, isInCart: res.data.getPurchaseTable.isInCart?? 0, isPurchased: res.data.getPurchaseTable.isPurchased?? 0, index: 0, check: 0 };
                   newItem.isPurchased = item.isPurchased;
                   newItem.index = index;
                   newItems = [...newItems, newItem];
