@@ -29,14 +29,14 @@ function PurchaseItem(props: Props) {
         fetchItem("item#" + itemId, "#meta#" + itemId)
           .then((res) => {
             getPresignedUrl(
-              res.data.getPurchaseTable.imagefile
+              res.data.getPurchaseTable?.imagefile ?? ""
             ).then((image) => {
               setImageFile(image);
             });
           })
           .catch((err) => console.log(err));
 
-        const items: Array<PurchaseData> = res.data.listPurchaseTables.items;
+        const items: PurchaseData[] = res.data.listPurchaseTables?.items;
         
         items.forEach((item) => {
           // 💡 修正点: 明細レコード（type: "pitem"）のときだけ価格を合計する

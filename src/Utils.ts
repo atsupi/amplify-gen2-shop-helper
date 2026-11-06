@@ -48,6 +48,10 @@ export const listItems = async (type: string) => {
   return { data: { purchaseTableByType: { items: data } } };
 };
 
+export type listPurchaseItemsReturnValue = {
+  data: { listPurchaseTables: { items: Array<PurchaseData> } }
+}
+
 // 複合キーのPK側のみで絞り込むリスト取得
 export const listPurchaseItems = async (PK: string) => {
   const { data, errors } = await client.models.PurchaseTable.list({
