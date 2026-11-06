@@ -33,7 +33,7 @@ function DetailItem(props: Props) {
             checked={isChecked ? true : false}
             color="success"
             onChange={onChangeCheckbox}
-            inputProps={{ "aria-label": `${props.item.index}` }}
+            slotProps={{ input: { "aria-label": `${props.item.index}`} }}
           />
         </div>
         <img src={presignedUrl} width="60" height="80" />

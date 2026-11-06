@@ -18,8 +18,9 @@ function CartItem( props: Props ) {
   useEffect(() => {
     if (props.PK && props.SK) {
       fetchItem(props.PK, props.SK).then((res) => {
-        setCurItem(res.data.getPurchaseTable);
-        getPresignedUrl(res.data.getPurchaseTable?.imagefile).then((url) => {
+        const newItem: PurchaseData = { ...res.data.getPurchaseTable, id: res.data.getPurchaseTable.id?? "", imagefile: res.data.getPurchaseTable.imagefile?? "", username: res.data.getPurchaseTable.username?? "", description: res.data.getPurchaseTable.description?? "", price: res.data.getPurchaseTable.price?? 0, isInCart: res.data.getPurchaseTable.isInCart?? 0, isPurchased: res.data.getPurchaseTable.isPurchased?? 0, index: 0, check: 0 }; 
+        setCurItem(newItem);
+        getPresignedUrl(res.data.getPurchaseTable?.imagefile || "").then((url) => {
           setPresignedUrl(url);
         });
       });

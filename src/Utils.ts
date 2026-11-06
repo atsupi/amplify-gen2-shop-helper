@@ -29,8 +29,12 @@ export const getList = async (nextToken: string | null = null) => {
   return { data: { listPurchaseTables: { items: data } } };
 };
 
+export type fetchItemReturnValue = {
+  data: { getPurchaseTable: PurchaseData }
+}
+
 // 複合主キー（PK, SK）による1件取得
-export const fetchItem = async (PK: string, SK: string) => {
+export const fetchItem = async (PK: string, SK: string): Promise<fetchItemReturnValue> => {
   const { data, errors } = await client.models.PurchaseTable.get({
     PK: PK,
     SK: SK,
@@ -38,6 +42,10 @@ export const fetchItem = async (PK: string, SK: string) => {
   if (errors) throw new Error(JSON.stringify(errors));
   return { data: { getPurchaseTable: data } };
 };
+
+export type listItemsReturnValue = {
+  data: { purchaseTableByType: { items: Array<PurchaseData> } }
+}
 
 // インデックス（byType）を利用したクエリ取得
 export const listItems = async (type: string) => {
@@ -92,7 +100,8 @@ export const fetchPurchases = async () => {
 
 // 明示的な更新メソッド
 export const mutatePurchase = async (targetPurchase: Partial<PurchaseData> & { PK: string; SK: string }) => {
-  const { data, errors } = await client.models.PurchaseTable.update(targetPurchase);
+  // @ts-ignore
+  const { _data, errors } = await client.models.PurchaseTable.update(targetPurchase);
   if (errors) throw new Error(JSON.stringify(errors));
   return { data: targetPurchase };
 };
