@@ -1,13 +1,20 @@
-import { useEffect, useState } from 'react';
-import { generateClient } from 'aws-amplify/data';
-import type { Schema } from '../amplify/data/resource';
+import { Authenticator, Button } from "@aws-amplify/ui-react";
+import HomeBar from "./components/HomeBar";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import Home from "./pages/Home";
+import Shop from "./pages/Shop";
+import Cart from "./pages/Cart";
+import Register from "./pages/Register";
+import PurchaseList from "./pages/PurchaseList";
+import Detail from "./pages/Detail";
+//import { useEffect, useState } from 'react';
+//import { generateClient } from 'aws-amplify/data';
+//import type { Schema } from '../amplify/data/resource';
 
-import { Authenticator } from '@aws-amplify/ui-react';
-import '@aws-amplify/ui-react/styles.css';
-
-const client = generateClient<Schema>();
+//const client = generateClient<Schema>();
 
 function App() {
+/*
   const [todos, setTodos] = useState<Array<Schema['Todo']['type']>>([]);
   const [content, setContent] = useState('');
 
@@ -56,75 +63,43 @@ function App() {
       console.error("データ削除エラー:", err);
     }
   };
+*/
 
   return (
     <Authenticator>
       {({ signOut, user }) => (
-        <div style={{ padding: '20px', fontFamily: 'sans-serif', maxWidth: '500px', margin: '0 auto' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-            <h1>俺のTodoリスト</h1>
-            <div>
-              <span style={{ marginRight: '10px', fontSize: '14px' }}>{user?.username} さん</span>
-              <button onClick={signOut} style={{ cursor: 'pointer' }}>ログアウト</button>
-            </div>
-          </div>
-          
-          <form onSubmit={createTodo} style={{ marginBottom: '20px', display: 'flex', gap: '8px' }}>
-            <input
-              type="text"
-              placeholder="自分専用のタスクを入力..."
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              style={{ flex: 1, padding: '8px', fontSize: '16px' }}
-            />
-            <button type="submit" style={{ padding: '8px 16px', cursor: 'pointer' }}>追加</button>
-          </form>
-
-          <ul style={{ padding: 0, listStyle: 'none' }}>
-            {todos.map((todo) => (
-              <li 
-                key={todo.id} 
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  justifyContent: 'space-between',
-                  padding: '10px',
-                  borderBottom: '1px solid #eee',
-                  background: '#fff',
-                  marginBottom: '5px',
-                  borderRadius: '4px'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                  {/* 💡 完了切り替え用のチェックボックス */}
-                  <input 
-                    type="checkbox" 
-                    checked={todo.isDone || false} 
-                    onChange={() => toggleTodo(todo)}
-                    style={{ width: '18px', height: '18px', cursor: 'pointer' }}
-                  />
-                  <span style={{ textDecoration: todo.isDone ? 'line-through' : 'none', color: todo.isDone ? '#888' : '#333' }}>
-                    {todo.content}
-                  </span>
+        <>
+          <div className="App">
+            <header className="App-header">
+              <h2>{user?.username}</h2>
+              <Button onClick={signOut}>SignOut</Button>
+            </header>
+            <main className="Main">
+              <BrowserRouter>
+                <HomeBar />
+                <div className="MainContent">
+                  <Routes>
+                    <Route index path="/" element={<Home />} />
+                    <Route
+                      path="/register"
+                      element={<Register />}
+                    />
+                    <Route path="/shop" element={<Shop />} />
+                    <Route
+                      path="/cart"
+                      element={<Cart />}
+                    />
+                    <Route path="/purchase" element={<PurchaseList />} />
+                    <Route path="/detail" element={null}>
+                      <Route path=":id" element={<Detail />} />
+                    </Route>
+                  </Routes>
                 </div>
-                {/* 💡 削除ボタン */}
-                <button 
-                  onClick={() => deleteTodo(todo.id)}
-                  style={{ 
-                    background: '#ff4d4f', 
-                    color: '#fff', 
-                    border: 'none', 
-                    padding: '4px 8px', 
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  削除
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
+              </BrowserRouter>
+            </main>
+            <footer className="App-footer"></footer>
+          </div>
+        </>
       )}
     </Authenticator>
   );
