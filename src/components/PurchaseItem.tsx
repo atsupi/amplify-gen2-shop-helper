@@ -4,9 +4,8 @@ import {
   fetchItem,
   getPresignedUrl,
   listPurchaseItems,
-  listPurchaseItemsReturnValue,
 } from "../Utils";
-import { PurchaseData } from "../types";
+import type { PurchaseData } from "../types";
 
 type Props = {
   data: PurchaseData;
@@ -15,46 +14,55 @@ type Props = {
 function PurchaseItem(props: Props) {
   const [imagefile, setImageFile] = useState("");
   const [totalPrice, setTotalPrice] = useState(0);
-  const [completed, setCompleted] = useState(0);
+  const [completed, setCompleted] = useState(false);
   const [numberOfItems, setNumberOfItems] = useState(0);
   const purchaseIndex: PurchaseData = props.data;
 
   useEffect(() => {
-    let temp_completed = 1;
-    let calculatedTotalPrice = 0; // 💡 価格集計用のローカル変数を用意
+    let cancelled = false;
 
-    listPurchaseItems(purchaseIndex.PK || "").then(
-      (res: listPurchaseItemsReturnValue) => {
-        const itemId = res.data.listPurchaseTables.items[1].SK?.split("#")[1];
-        fetchItem("item#" + itemId, "#meta#" + itemId)
-          .then((res) => {
-            getPresignedUrl(
-              res.data.getPurchaseTable?.imagefile ?? ""
-            ).then((image) => {
-              setImageFile(image);
-            });
-          })
-          .catch((err) => console.log(err));
+    const loadPurchase = async () => {
+      try {
+        const records = (
+          await listPurchaseItems(purchaseIndex.PK)
+        ).data.listPurchaseTables.items;
+        const items = records.filter((item) => item.type === "pitem");
 
-        const items: PurchaseData[] = res.data.listPurchaseTables?.items;
-        
-        items.forEach((item) => {
-          // 💡 修正点: 明細レコード（type: "pitem"）のときだけ価格を合計する
-          if (item.type === "pitem") {
-            calculatedTotalPrice += item.price;
-          }
-          
-          if (item.isPurchased === 0) {
-            temp_completed = 0;
-          }
-        });
+        if (cancelled) return;
 
-        setTotalPrice(calculatedTotalPrice); // 💡 最後にまとめてStateを更新
-        setCompleted(temp_completed);
-        setNumberOfItems(items.length - 1);
+        setTotalPrice(
+          items.reduce((total, item) => total + (item.price ?? 0), 0)
+        );
+        setNumberOfItems(items.length);
+        setCompleted(
+          items.length > 0 && items.every((item) => item.isPurchased === 1)
+        );
+
+        const itemId = items[0]?.SK?.split("#")[1];
+        if (!itemId) {
+          setImageFile("");
+          return;
+        }
+
+        const product = (await fetchItem(`item#${itemId}`, `#meta#${itemId}`))
+          .data.getPurchaseTable;
+        const imageKey = product?.imagefile;
+        if (imageKey) {
+          const imageUrl = await getPresignedUrl(imageKey);
+          if (!cancelled) setImageFile(imageUrl);
+        } else if (!cancelled) {
+          setImageFile("");
+        }
+      } catch (error) {
+        console.error("Failed to load purchase summary:", error);
       }
-    );
-  }, []);
+    };
+
+    void loadPurchase();
+    return () => {
+      cancelled = true;
+    };
+  }, [purchaseIndex.PK]);
 
   return (
     <>

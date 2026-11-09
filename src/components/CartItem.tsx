@@ -1,15 +1,14 @@
-import { RefCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import "./CartItem.css";
-import { PurchaseData, UpdateItemValue } from "../types";
+import { PurchaseData } from "../types";
 import { fetchItem, getPresignedUrl } from "../Utils";
 import { Button } from "@aws-amplify/ui-react";
-import { updateItemStatus } from "../Utils";
 
 type Props = {
   PK: string;
   SK: string;
-  onDelete: RefCallback<{PK: string, SK: string}>;
-}
+  onDelete: (item: { PK: string; SK: string }) => void;
+};
 
 function CartItem( props: Props ) {
   const [curItem, setCurItem] = useState<PurchaseData>();
@@ -17,32 +16,36 @@ function CartItem( props: Props ) {
 
   useEffect(() => {
     if (props.PK && props.SK) {
-      fetchItem(props.PK, props.SK).then((res) => {
-        const newItem: PurchaseData = { ...res.data.getPurchaseTable, id: res.data.getPurchaseTable.id?? "", imagefile: res.data.getPurchaseTable.imagefile?? "", username: res.data.getPurchaseTable.username?? "", description: res.data.getPurchaseTable.description?? "", price: res.data.getPurchaseTable.price?? 0, isInCart: res.data.getPurchaseTable.isInCart?? 0, isPurchased: res.data.getPurchaseTable.isPurchased?? 0, index: 0, check: 0 }; 
-        setCurItem(newItem);
-        getPresignedUrl(res.data.getPurchaseTable?.imagefile || "").then((url) => {
-          setPresignedUrl(url);
+      void fetchItem(props.PK, props.SK)
+        .then(async (res) => {
+          const item = res.data.getPurchaseTable;
+          if (!item) return;
+
+          setCurItem({
+            ...item,
+            imagefile: item.imagefile ?? "",
+            username: item.username ?? "",
+            description: item.description ?? "",
+            price: item.price ?? 0,
+            isInCart: item.isInCart ?? 0,
+            isPurchased: item.isPurchased ?? 0,
+            index: 0,
+            check: 0,
+          });
+          if (item.imagefile) {
+            setPresignedUrl(await getPresignedUrl(item.imagefile));
+          }
+        })
+        .catch((error) => {
+          console.error("Failed to load cart item:", error);
         });
-      });
     }
   }, []);
 
   const deleteCurrentItem = () => {
-    console.log(curItem);
-    if (curItem) {
-      const newItem: UpdateItemValue = {
-        PK: curItem.PK || "",
-        SK: curItem.SK,
-        type: curItem.type,
-        imagefile: curItem.imagefile,
-        price: curItem.price,
-        username: curItem.username,
-        description: curItem.description,
-        isInCart: 0
-      }
-      updateItemStatus(newItem);
-    }
-    props.onDelete({PK: curItem?.PK || "", SK: curItem?.SK});
+    if (!curItem) return;
+
+    props.onDelete({ PK: curItem.PK, SK: curItem.SK });
   };
 
   return (

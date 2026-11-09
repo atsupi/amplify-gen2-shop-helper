@@ -1,21 +1,19 @@
-import { generateClient } from 'aws-amplify/api';
-import { getUrl } from 'aws-amplify/storage';
-import { type Schema } from '../amplify/data/resource'; // 💡 resource.tsの絶対/相対パスを環境に合わせて調整してください
+import { generateClient } from "aws-amplify/api";
+import { getUrl } from "aws-amplify/storage";
+import type { Schema } from "../amplify/data/resource";
 
 // クライアントの生成
 const client = generateClient<Schema>();
 
-// Gen2でのデータの型定義の取得方法
-export type PurchaseData = Schema['PurchaseTable']['type'];
+export type PurchaseData = Schema["PurchaseTable"]["type"];
 
 // プレサインドURLの取得（Storage.get から getUrl へ移行）
-export async function getPresignedUrl(key: string) {
-  // Gen2のデフォルト（guestアクセス想定の場合は明示的に指定）
+export async function getPresignedUrl(key: string): Promise<string> {
   const result = await getUrl({
-    path: `public/${key}`, // Gen2ではpathを用いたアプローチが推奨されます
+    path: `public/${key}`,
     options: {
       validateObjectExistence: false,
-    }
+    },
   });
   return result.url.toString();
 }
@@ -30,42 +28,47 @@ export const getList = async (nextToken: string | null = null) => {
 };
 
 export type fetchItemReturnValue = {
-  data: { getPurchaseTable: PurchaseData }
+  data: { getPurchaseTable: PurchaseData | null };
 }
 
 // 複合主キー（PK, SK）による1件取得
-export const fetchItem = async (PK: string, SK: string): Promise<fetchItemReturnValue> => {
+export const fetchItem = async (
+  PK: string,
+  SK: string
+): Promise<fetchItemReturnValue> => {
   const { data, errors } = await client.models.PurchaseTable.get({
-    PK: PK,
-    SK: SK,
+    PK,
+    SK,
   });
   if (errors) throw new Error(JSON.stringify(errors));
   return { data: { getPurchaseTable: data } };
 };
 
 export type listItemsReturnValue = {
-  data: { purchaseTableByType: { items: Array<PurchaseData> } }
+  data: { purchaseTableByType: { items: PurchaseData[] } };
 }
 
 // インデックス（byType）を利用したクエリ取得
-export const listItems = async (type: string) => {
+export const listItems = async (type: string): Promise<listItemsReturnValue> => {
   const { data, errors } = await client.models.PurchaseTable.purchaseTableByType({
-    type: type,
+    type,
   });
   if (errors) throw new Error(JSON.stringify(errors));
   return { data: { purchaseTableByType: { items: data } } };
 };
 
 export type listPurchaseItemsReturnValue = {
-  data: { listPurchaseTables: { items: Array<PurchaseData> } }
+  data: { listPurchaseTables: { items: PurchaseData[] } };
 }
 
 // 複合キーのPK側のみで絞り込むリスト取得
-export const listPurchaseItems = async (PK: string) => {
+export const listPurchaseItems = async (
+  PK: string
+): Promise<listPurchaseItemsReturnValue> => {
   const { data, errors } = await client.models.PurchaseTable.list({
     filter: {
-      PK: { eq: PK }
-    }
+      PK: { eq: PK },
+    },
   });
   if (errors) throw new Error(JSON.stringify(errors));
   return { data: { listPurchaseTables: { items: data } } };
@@ -81,14 +84,12 @@ export const listItemsInCart = async () => {
 };
 
 // ステータス更新（部分的な更新）
-export async function updateItemStatus(item: Partial<PurchaseData> & { PK: string; SK: string }) {
-  try {
-    const { data, errors } = await client.models.PurchaseTable.update(item);
-    if (errors) throw new Error(JSON.stringify(errors));
-    console.log(data);
-  } catch (event) {
-    console.log(event);
-  }
+export async function updateItemStatus(
+  item: Partial<PurchaseData> & Pick<PurchaseData, "PK" | "SK">
+) {
+  const { data, errors } = await client.models.PurchaseTable.update(item);
+  if (errors) throw new Error(JSON.stringify(errors));
+  return data;
 }
 
 // データ取得（fetchPurchases）
@@ -99,9 +100,10 @@ export const fetchPurchases = async () => {
 };
 
 // 明示的な更新メソッド
-export const mutatePurchase = async (targetPurchase: Partial<PurchaseData> & { PK: string; SK: string }) => {
-  // @ts-ignore
-  const { _data, errors } = await client.models.PurchaseTable.update(targetPurchase);
+export const mutatePurchase = async (
+  targetPurchase: Partial<PurchaseData> & Pick<PurchaseData, "PK" | "SK">
+) => {
+  const { data, errors } = await client.models.PurchaseTable.update(targetPurchase);
   if (errors) throw new Error(JSON.stringify(errors));
-  return { data: targetPurchase };
+  return data;
 };

@@ -7,7 +7,7 @@ import { PurchaseData } from "../types";
 
 function PurchaseList() {
   let index = 0;
-  const [purchaseLists, setPurchaseLists] = useState(Array<PurchaseData>);
+  const [purchaseLists, setPurchaseLists] = useState<PurchaseData[]>([]);
 
   useEffect(() => {
     listItems("purchase").then((res: listItemsReturnValue) => {

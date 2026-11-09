@@ -1,27 +1,26 @@
-import React, { RefCallback, useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import "./DetailItem.css";
 import { getPresignedUrl } from "../Utils";
 import { Checkbox } from "@mui/material";
 import { PurchaseData } from "../types";
 
 type Props = {
-  item: PurchaseData,
-  onChange: RefCallback<React.ChangeEvent<HTMLInputElement>>;
+  item: PurchaseData;
+  onChange: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 function DetailItem(props: Props) {
   const [presignedUrl, setPresignedUrl] = useState("");
-  const [isChecked, setIsChecked] = useState(props.item.isPurchased);
+  const [isChecked, setIsChecked] = useState(props.item.isPurchased === 1);
 
   useEffect(() => {
-    getPresignedUrl(props.item.imagefile).then((data) => {
+    getPresignedUrl(props.item.imagefile ?? "").then((data) => {
       setPresignedUrl(data);
     });
-  }, []);
+  }, [props.item.imagefile]);
 
   const onChangeCheckbox = (event: React.ChangeEvent<HTMLInputElement>): void => {
-    props.item.isPurchased = 1 - props.item.isPurchased;
-    setIsChecked(props.item.isPurchased);
+    setIsChecked(event.target.checked);
     props.onChange(event);
   };
 

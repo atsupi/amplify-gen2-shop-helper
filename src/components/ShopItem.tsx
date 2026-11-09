@@ -1,42 +1,60 @@
 import "./ShopItem.css";
-import { RefCallback, useEffect, useState } from "react";
+import { useEffect, useState, type ChangeEvent } from "react";
 import { Checkbox } from "@mui/material";
 import { getPresignedUrl, updateItemStatus } from "../Utils";
-import { PurchaseData, UpdateItemValue } from "../types";
+import type { PurchaseData } from "../types";
 
 type Props = {
   value: PurchaseData;
-  onChange: RefCallback<React.ChangeEvent<HTMLInputElement>>;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
 }
 
-function ShopItem( props: Props ) {
+function ShopItem(props: Props) {
   const [imageName, setImageName] = useState("");
-  const [isInCart, setIsInCart] = useState(0);
+  const [isInCart, setIsInCart] = useState(props.value.isInCart === 1);
 
   useEffect(() => {
-    if (props.value.imagefile) {
-      getPresignedUrl(props.value.imagefile).then((result) => {
-        setImageName(result);
-      });
-    }
-    setIsInCart(props.value.isInCart);
-  }, []);
+    let cancelled = false;
 
-  const onClickCheckbox = (event: React.ChangeEvent<HTMLInputElement>) => {
-    props.value.isInCart = 1 - isInCart;
-    setIsInCart(1 - isInCart);
-    const newValue: UpdateItemValue = {
-      PK: props.value.PK || "",
-      SK: props.value.SK || "",
-      type: props.value.type,
-      imagefile: props.value.imagefile,
-      price: props.value.price,
-      username: props.value.username,
-      description: props.value.description,
-      isInCart: props.value.isInCart
-    }
-    updateItemStatus(newValue);
-    props.onChange(event);
+    const loadImage = async () => {
+      if (!props.value.imagefile) {
+        setImageName("");
+        return;
+      }
+
+      try {
+        const result = await getPresignedUrl(props.value.imagefile);
+        if (!cancelled) setImageName(result);
+      } catch (error) {
+        console.error("Failed to load product image:", error);
+      }
+    };
+
+    void loadImage();
+    return () => {
+      cancelled = true;
+    };
+  }, [props.value.imagefile]);
+
+  useEffect(() => {
+    setIsInCart(props.value.isInCart === 1);
+  }, [props.value.isInCart]);
+
+  const onClickCheckbox = (event: ChangeEvent<HTMLInputElement>) => {
+    const nextIsInCart = event.target.checked;
+    const nextStatus = nextIsInCart ? 1 : 0;
+    setIsInCart(nextIsInCart);
+
+    void updateItemStatus({
+      PK: props.value.PK,
+      SK: props.value.SK,
+      isInCart: nextStatus,
+    })
+      .then(() => props.onChange(event))
+      .catch((error) => {
+        setIsInCart(!nextIsInCart);
+        console.error("Failed to update cart status:", error);
+      });
   };
 
   return (
@@ -44,14 +62,14 @@ function ShopItem( props: Props ) {
       <div className="ShopItem_div">
         <div className="checkbox">
           <Checkbox
-            checked={isInCart ? true : false}
+            checked={isInCart}
             color="success"
             onChange={onClickCheckbox}
           />
         </div>
         <div className="ShopItem_productImage">
           {imageName ? (
-            <img src={imageName} width="60" height="80" alt="imageName" />
+            <img src={imageName} width="60" height="80" alt="Product" />
           ) : (
             <div className="NoImage">No image</div>
           )}

@@ -20,6 +20,7 @@ frontend:
       commands:
         # Viteのビルドでメモリ不足によるハングを防ぐための安全策
         - export NODE_OPTIONS="--max-old-space-size=4096"
+        - npm run test -- --run
         - npm run build
   artifacts:
     baseDirectory: dist

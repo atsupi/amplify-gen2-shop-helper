@@ -1,13 +1,10 @@
 import { useEffect, useState } from "react";
 import "./DetailList.css";
-import { PurchaseData, UpdatePurchaseItemValue } from "../types";
+import type { PurchaseData } from "../types";
 import {
   fetchItem,
-  fetchItemReturnValue,
   listItems,
-  listItemsReturnValue,
   listPurchaseItems,
-  listPurchaseItemsReturnValue,
   mutatePurchase,
 } from "../Utils";
 import DetailItem from "./DetailItem";
@@ -17,57 +14,87 @@ type Props = {
 };
 
 function DetailList(props: Props) {
-  const [items, setItems] = useState(Array<PurchaseData>);
-  const [purchaseItems, setPurchaseItems] = useState(Array<PurchaseData>);
+  const [items, setItems] = useState<PurchaseData[]>([]);
+  const [purchaseItems, setPurchaseItems] = useState<PurchaseData[]>([]);
 
   useEffect(() => {
-    let purchases: Array<PurchaseData> = [];
-    listItems("purchase").then((res: listItemsReturnValue) => {
-      purchases = res.data.purchaseTableByType.items;
-      let newItems: Array<PurchaseData> = [];
-      let index = 0;
-      const purchaseId = purchases[props.pindex - 1].PK || "";
-      listPurchaseItems(purchaseId)
-        .then((res: listPurchaseItemsReturnValue) => {
-          res.data.listPurchaseTables.items.map((item) => {
-            if (item.type === "pitem") {
-              const itemSK: string = item.SK;
-              const itemId = itemSK.split("#")[1];
-              fetchItem("item#" + itemId, "#meta#" + itemId).then(
-                (res: fetchItemReturnValue) => {
-                  const newItem: PurchaseData = { ...res.data.getPurchaseTable, id: res.data.getPurchaseTable.id?? "", imagefile: res.data.getPurchaseTable.imagefile?? "", username: res.data.getPurchaseTable.username?? "", description: res.data.getPurchaseTable.description?? "", price: res.data.getPurchaseTable.price?? 0, isInCart: res.data.getPurchaseTable.isInCart?? 0, isPurchased: res.data.getPurchaseTable.isPurchased?? 0, index: 0, check: 0 };
-                  newItem.isPurchased = item.isPurchased;
-                  newItem.index = index;
-                  newItems = [...newItems, newItem];
-                  setItems(newItems);
-                  index = index + 1;
-                }
-              );
-              setPurchaseItems((prevItems) => {
-                const newItems = [...prevItems, item];
-                return newItems;
-              });
-            }
-          });
-        })
-        .catch((err) => console.log(err));
-    });
-  }, []);
+    let cancelled = false;
+
+    const loadItems = async () => {
+      try {
+        const purchases = (await listItems("purchase")).data.purchaseTableByType.items;
+        const purchase = purchases[props.pindex - 1];
+        if (!purchase?.PK) {
+          setItems([]);
+          setPurchaseItems([]);
+          return;
+        }
+
+        const purchaseRecords = (
+          await listPurchaseItems(purchase.PK)
+        ).data.listPurchaseTables.items.filter((item) => item.type === "pitem");
+
+        const results = await Promise.all(
+          purchaseRecords.map(async (purchaseItem) => {
+            const itemId = purchaseItem.SK?.split("#")[1];
+            if (!itemId) return null;
+
+            const result = await fetchItem(`item#${itemId}`, `#meta#${itemId}`);
+            const item = result.data.getPurchaseTable;
+            if (!item) return null;
+
+            return {
+              purchaseItem,
+              item: {
+                ...item,
+                imagefile: item.imagefile ?? "",
+                username: item.username ?? "",
+                description: item.description ?? "",
+                price: item.price ?? 0,
+                isInCart: item.isInCart ?? 0,
+                isPurchased: purchaseItem.isPurchased ?? 0,
+              },
+            };
+          })
+        );
+        const loaded = results.filter(
+          (result): result is NonNullable<typeof result> => result !== null
+        );
+        const loadedItems = loaded.map(({ item }, index) => ({ ...item, index }));
+
+        if (!cancelled) {
+          setItems(loadedItems);
+          setPurchaseItems(loaded.map(({ purchaseItem }) => purchaseItem));
+        }
+      } catch (error) {
+        console.error("Failed to load purchase details:", error);
+      }
+    };
+
+    void loadItems();
+    return () => {
+      cancelled = true;
+    };
+  }, [props.pindex]);
 
   const onChangeCheckbox = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const arialabel: string | null = event?.target.ariaLabel;
-    const index = parseInt(arialabel ? arialabel : "1");
-    purchaseItems[index].isPurchased = 1 - purchaseItems[index].isPurchased;
-    console.log("onChangeCheckbox", purchaseItems[index]);
-    const targetPurchase: UpdatePurchaseItemValue = {
-      PK: purchaseItems[index].PK || "",
-      SK: purchaseItems[index].SK,
-      type: purchaseItems[index].type,
-      price: purchaseItems[index].price,
-      username: purchaseItems[index].username,
-      isPurchased: purchaseItems[index].isPurchased,
-    };
-    mutatePurchase(targetPurchase);
+    const index = Number(event.target.getAttribute("aria-label"));
+    const purchaseItem = purchaseItems[index];
+    if (!Number.isInteger(index) || !purchaseItem) return;
+
+    const isPurchased = purchaseItem.isPurchased === 1 ? 0 : 1;
+    setPurchaseItems((previousItems) =>
+      previousItems.map((item, itemIndex) =>
+        itemIndex === index ? { ...item, isPurchased } : item
+      )
+    );
+    void mutatePurchase({
+      PK: purchaseItem.PK,
+      SK: purchaseItem.SK,
+      isPurchased,
+    }).catch((error) => {
+      console.error("Failed to update purchase status:", error);
+    });
   };
 
   return (
