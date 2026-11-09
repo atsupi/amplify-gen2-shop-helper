@@ -49,8 +49,12 @@ function ShopItem(props: Props) {
       PK: props.value.PK,
       SK: props.value.SK,
       isInCart: nextStatus,
-    });
-    props.onChange(event);
+    })
+      .then(() => props.onChange(event))
+      .catch((error) => {
+        setIsInCart(!nextIsInCart);
+        console.error("Failed to update cart status:", error);
+      });
   };
 
   return (
