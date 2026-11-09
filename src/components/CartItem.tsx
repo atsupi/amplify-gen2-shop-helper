@@ -1,6 +1,6 @@
-import { RefCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import "./CartItem.css";
-import { PurchaseData, UpdateItemValue } from "../types";
+import { PurchaseData } from "../types";
 import { fetchItem, getPresignedUrl } from "../Utils";
 import { Button } from "@aws-amplify/ui-react";
 import { updateItemStatus } from "../Utils";
@@ -8,8 +8,8 @@ import { updateItemStatus } from "../Utils";
 type Props = {
   PK: string;
   SK: string;
-  onDelete: RefCallback<{PK: string, SK: string}>;
-}
+  onDelete: (item: { PK: string; SK: string }) => void;
+};
 
 function CartItem( props: Props ) {
   const [curItem, setCurItem] = useState<PurchaseData>();
@@ -28,21 +28,15 @@ function CartItem( props: Props ) {
   }, []);
 
   const deleteCurrentItem = () => {
-    console.log(curItem);
-    if (curItem) {
-      const newItem: UpdateItemValue = {
-        PK: curItem.PK || "",
-        SK: curItem.SK,
-        type: curItem.type,
-        imagefile: curItem.imagefile,
-        price: curItem.price,
-        username: curItem.username,
-        description: curItem.description,
-        isInCart: 0
-      }
-      updateItemStatus(newItem);
-    }
-    props.onDelete({PK: curItem?.PK || "", SK: curItem?.SK});
+    if (!curItem) return;
+
+    updateItemStatus({
+      PK: curItem.PK,
+      SK: curItem.SK,
+      isInCart: 0,
+    });
+
+    props.onDelete({ PK: curItem.PK, SK: curItem.SK });
   };
 
   return (

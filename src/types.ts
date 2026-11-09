@@ -1,17 +1,9 @@
-export interface PurchaseData {
-    id: string;
-    PK: string | undefined;
-    SK: string | any;
-    type: string | any;
-    imagefile: string | any;
-    price: number | any;
-    username: string | any;
-    description: string | any;
-    isInCart: number | any;
-    isPurchased: number | any;
-    index: number | any;
-    check: number | any;
-}
+import type { Schema } from "../amplify/data/resource";
+
+export type PurchaseData = Schema["PurchaseTable"]["type"] & {
+  index?: number;
+  check?: number;
+};
 
 export interface NewItemValue {
     PK: string;
