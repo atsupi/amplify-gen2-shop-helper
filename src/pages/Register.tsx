@@ -30,7 +30,7 @@ function Register() {
           path: `public/${file.name}`,
           data: file,
           options: {
-            onProgress: (progress) => {
+            onProgress: (progress: any) => {
               let percentage = (100 * progress.transferredBytes) / progress.totalBytes!;
               console.log(`progress: ${percentage}%`);
             },

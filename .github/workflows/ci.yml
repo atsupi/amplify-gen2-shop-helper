@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  ci:
+    name: Lint, Test & Build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+            
+      # 1. pnpm をセットアップ（パッケージのキャッシュも有効化）
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+                
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      # 2. CI環境でビルドスクリプトの実行制限を解除（ERR_PNPM_IGNORED_BUILDS 回避）
+      - name: Approve pnpm builds
+        run: pnpm config set only-built-dependencies --json ''
+                
+      # 3. ロックファイル固定で依存関係をインストール（npm ci の代わり）
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      # 💡 追加：Vite/TypeScriptのコンパイルエラーを防ぐために空のダミーファイルを生成
+      - name: Generate dummy amplify_outputs.json for CI
+        run: echo '{}' > amplify_outputs.json
+        
+      - name: Run Tests
+        run: pnpm test
+
+      - name: Run Build
+        run: pnpm run build
