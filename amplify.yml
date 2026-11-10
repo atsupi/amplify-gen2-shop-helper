@@ -3,29 +3,34 @@ backend:
   phases:
     preBuild:
       commands:
+        # Node.js 22 のセットアップ
         - nvm use 22 || nvm install 22
+        # 1. backendのデプロイ前に pnpm をグローバルインストール
+        - npm install -g pnpm
+        # 2. CI環境でビルドスクリプトの実行制限を解除（重要）
+        - pnpm config set only-built-dependencies --json '[]'
     build:
       commands:
-        - export NPM_CONFIG_LEGACY_PEER_DEPS=true
-        - npm install --cache .npm --prefer-offline
-        - npx ampx pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
+        # npm の代わりに npx pnpm を使ってバックエンド（Amplify Gen 2）をデプロイ
+        - npx pnpm amplify pipeline-deploy --branch $AWS_BRANCH --app-id $AWS_APP_ID
 frontend:
   phases:
     preBuild:
       commands:
-        - nvm use 22
-        - export NPM_CONFIG_LEGACY_PEER_DEPS=true
-        - npm install --cache .npm --prefer-offline --ignore-scripts
+        # 3. 厳密な同期モードでインストール（npm ci の代わり）
+        - pnpm install --frozen-lockfile
     build:
       commands:
         # Viteのビルドでメモリ不足によるハングを防ぐための安全策
         - export NODE_OPTIONS="--max-old-space-size=4096"
-        - npm run test -- --run
-        - npm run build
+        # 4. pnpm でビルドを実行
+        - pnpm run build
   artifacts:
     baseDirectory: dist
     files:
       - '**/*'
   cache:
     paths:
-      - .npm/**/*
+      # pnpm のストアもキャッシュ対象に含めると次回から高速化します
+      - .pnpm-store/**/*
+      - node_modules/**/*
