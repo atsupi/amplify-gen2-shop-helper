@@ -5,10 +5,8 @@ backend:
       commands:
         # Node.js 22 のセットアップ
         - nvm use 22 || nvm install 22
-        # 1. backendのデプロイ前に pnpm をグローバルインストール
+        # backendのデプロイ前に pnpm をグローバルインストール
         - npm install -g pnpm
-        # 2. CI環境でビルドスクリプトの実行制限を解除（重要）
-        - pnpm config set only-built-dependencies --json '[]'
     build:
       commands:
         # npm の代わりに npx pnpm を使ってバックエンド（Amplify Gen 2）をデプロイ
@@ -17,13 +15,13 @@ frontend:
   phases:
     preBuild:
       commands:
-        # 3. 厳密な同期モードでインストール（npm ci の代わり）
+        # 厳密な同期モードでインストール（npm ci の代わり）
         - pnpm install --frozen-lockfile
     build:
       commands:
         # Viteのビルドでメモリ不足によるハングを防ぐための安全策
         - export NODE_OPTIONS="--max-old-space-size=4096"
-        # 4. pnpm でビルドを実行
+        # pnpm でビルドを実行
         - pnpm run build
   artifacts:
     baseDirectory: dist
