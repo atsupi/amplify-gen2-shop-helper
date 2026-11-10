@@ -35,6 +35,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # 💡 追加：Vite/TypeScriptのコンパイルエラーを防ぐために空のダミーファイルを生成
+      - name: Generate dummy amplify_outputs.json for CI
+        run: echo '{}' > amplify_outputs.json
+        
       - name: Run Tests
         run: pnpm test
 
