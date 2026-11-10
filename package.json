@@ -40,7 +40,7 @@
     "vitest": "^1.6.0"
   },
   "pnpm": {
-    "allowedBuilds": [
+    "onlyBuiltDependencies": [
       "@aws-amplify/hosting",
       "@parcel/watcher",
       "core-js",
