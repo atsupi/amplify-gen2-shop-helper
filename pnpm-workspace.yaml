@@ -1,2 +1,7 @@
 packages:
   - '.'
+allowBuilds:
+  '@aws-amplify/hosting': true
+  '@parcel/watcher': true
+  core-js: true
+  esbuild: true
