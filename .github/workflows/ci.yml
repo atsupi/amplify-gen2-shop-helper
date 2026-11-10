@@ -15,23 +15,34 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
             
+      # 1. pnpm をセットアップ（パッケージのキャッシュも有効化）
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 9
+                
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'npm'
+          cache: 'pnpm'
+
+      # 2. CI環境でビルドスクリプトの実行制限を解除（ERR_PNPM_IGNORED_BUILDS 回避）
+      - name: Approve pnpm builds
+        run: pnpm config set only-built-dependencies --json ''
                 
+      # 3. ロックファイル固定で依存関係をインストール（npm ci の代わり）
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Run Type Check
-        run: npm run typecheck
+        run: pnpm run typecheck
             
       - name: Run Lint
-        run: npm run lint
+        run: pnpm run lint
             
       - name: Run Tests
-        run: npm test
+        run: pnpm test
 
       - name: Run Build
-        run: npm run build
+        run: pnpm run build
