@@ -1,0 +1,96 @@
+# Enforce LF line endings by default (prevents CRLF issues on Windows)
+* text=auto eol=lf
+
+# --------------------------------------------------
+# TypeScript / JavaScript
+# --------------------------------------------------
+*.js text eol=lf
+*.jsx text eol=lf
+*.ts text eol=lf
+*.tsx text eol=lf
+*.mjs text eol=lf
+*.cjs text eol=lf
+*.json text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+*.html text eol=lf
+
+# Collapse lockfiles and generated files in PR diffs
+package-lock.json linguist-generated=true -diff
+yarn.lock linguist-generated=true -diff
+pnpm-lock.yaml linguist-generated=true -diff
+bun.lockb binary -diff
+*.min.js linguist-generated=true -diff
+*.min.css linguist-generated=true -diff
+*.map linguist-generated=true -diff
+
+# --------------------------------------------------
+# Python
+# --------------------------------------------------
+*.py text eol=lf
+*.pyi text eol=lf
+*.pyx text eol=lf
+*.toml text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.ini text eol=lf
+*.cfg text eol=lf
+*.txt text eol=lf
+*.md text eol=lf
+
+# Collapse Python lockfiles and exclude Jupyter notebooks from language stats
+poetry.lock linguist-generated=true -diff
+uv.lock linguist-generated=true -diff
+Pipfile.lock linguist-generated=true -diff
+*.ipynb linguist-detectable=false
+
+# Tooling & Linter configs (exclude from GitHub language stats)
+vite.config.* linguist-vendored
+vitest.config.* linguist-vendored
+eslint.config.* linguist-vendored
+.eslintrc* text eol=lf linguist-vendored
+.prettierrc* text eol=lf linguist-vendored
+tsconfig*.json linguist-vendored
+
+# --------------------------------------------------
+# AWS CDK & Infrastructure as Code
+# --------------------------------------------------
+cdk.json text eol=lf
+cdk.context.json text eol=lf linguist-generated=true -diff
+cdk.out/** linguist-generated=true -diff
+**/__snapshots__/** linguist-generated=true -diff
+*.snap text eol=lf linguist-generated=true -diff
+
+# --------------------------------------------------
+# Shell, Config & Windows-specific files
+# --------------------------------------------------
+*.sh text eol=lf
+Dockerfile text eol=lf
+Makefile text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
+.editorconfig text eol=lf
+
+# Keep CRLF for Windows scripts
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+# --------------------------------------------------
+# Binary files (disable line ending conversion)
+# --------------------------------------------------
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.svg text eol=lf
+*.pdf binary
+*.zip binary
+*.tar.gz binary
+*.whl binary
+*.pyc binary
+*.sqlite binary
+*.sqlite3 binary
+*.db binary
