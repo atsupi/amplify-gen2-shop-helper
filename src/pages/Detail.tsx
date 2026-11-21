@@ -1,20 +1,15 @@
 import { Link, useParams } from "react-router-dom";
 import "./Detail.css";
 import DetailList from "../components/DetailList";
-import { useEffect, useState } from "react";
 
 function Detail() {
-  const [id, setId] = useState<string>("");
-  const [isIdSet, setIsIdSet] = useState(0);
-  const param = useParams();
-  useEffect(() => {
-    setId(param.id || "1");
-    setIsIdSet(1);
-  }, []);
+  const { id } = useParams();
+  const parsedId = Number.parseInt(id ?? "1", 10);
+  const pindex = Number.isNaN(parsedId) ? 1 : parsedId;
 
   return (
     <div className="Detail_div">
-      {isIdSet && <DetailList pindex={parseInt(id)} />}
+      <DetailList pindex={pindex} />
       <div className="DetailLink">
         <Link to="/purchase">Back</Link>
       </div>

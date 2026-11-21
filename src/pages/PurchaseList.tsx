@@ -6,7 +6,6 @@ import { listItems, listItemsReturnValue } from "../Utils";
 import { PurchaseData } from "../types";
 
 function PurchaseList() {
-  let index = 0;
   const [purchaseLists, setPurchaseLists] = useState<PurchaseData[]>([]);
 
   useEffect(() => {
@@ -19,8 +18,8 @@ function PurchaseList() {
     <>
       <h3>Purchase List</h3>
       <div className="PurchaseList_div">
-        {purchaseLists.map((item) => {
-          index = index + 1;
+        {purchaseLists.map((item, i) => {
+          const index = i + 1;
           return (
             <div className={`Item${index}`} key={`detail/${index}`}>
               <Link to={`/detail/${index}`} key={`linkToDetail/${index}`}>
