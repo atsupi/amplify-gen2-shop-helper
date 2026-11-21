@@ -8,7 +8,7 @@ on:
 
 jobs:
   ci:
-    name: Lint, Test & Build
+    name: Lint, Typecheck, Test & Build
     runs-on: ubuntu-latest
     
     steps:
@@ -39,8 +39,14 @@ jobs:
       - name: Generate dummy amplify_outputs.json for CI
         run: echo '{}' > amplify_outputs.json
         
+      - name: Typecheck
+        run: pnpm exec tsc --noEmit
+
+      - name: Lint
+        run: pnpm lint
+
       - name: Run Tests
-        run: pnpm test
+        run: pnpm test -- --run
 
       - name: Run Build
         run: pnpm run build
