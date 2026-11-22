@@ -46,3 +46,4 @@ Thumbs.db:encryptable
 Ehthumbs.db
 
 tmp/
+coverage/
