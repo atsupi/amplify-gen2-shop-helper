@@ -144,3 +144,4 @@ describe("Shop", () => {
     consoleSpy.mockRestore();
   });
 });
+
