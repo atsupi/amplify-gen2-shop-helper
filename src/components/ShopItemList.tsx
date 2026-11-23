@@ -1,27 +1,21 @@
-import { RefCallback } from "react";
+import type { ChangeEvent } from "react";
 import ShopItem from "./ShopItem";
-import { PurchaseData } from "../types";
+import type { PurchaseData } from "../types";
 
 type Props = {
   currentItems: PurchaseData[];
-  onChange: RefCallback<React.ChangeEvent<HTMLInputElement>>;
-}
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+};
 
-function ShopItemList( props: Props ) {
-  let index = 0;
-
-  const onChangeChild = (event: React.ChangeEvent<HTMLInputElement>) => {
-    props.onChange(event);
-  };
-
+function ShopItemList({ currentItems, onChange }: Props) {
   return (
     <>
-      {props.currentItems &&
-        props.currentItems.map((value: PurchaseData) => {
-          index = index + 1;
+      {currentItems &&
+        currentItems.map((value: PurchaseData, i: number) => {
+          const index = i + 1;
           return (
-            <div className={`Item${index}`} key={`Item${index}`}>
-              <ShopItem value={value} onChange={onChangeChild}/>
+            <div className={`Item${index}`} key={value.PK || `Item${index}`}>
+              <ShopItem value={value} onChange={onChange} />
             </div>
           );
         })}

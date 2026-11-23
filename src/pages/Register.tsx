@@ -1,10 +1,10 @@
 import "./Register.css";
 import { useUser } from "../hooks/useUser";
 import { uploadData, remove } from "@aws-amplify/storage";
-import { useState, ChangeEvent } from "react";
+import { useState, type ChangeEvent } from "react";
 import { Button } from "@aws-amplify/ui-react";
 import { generateClient } from "aws-amplify/api";
-import { type Schema } from "../../amplify/data/resource"; 
+import { type Schema } from "../../amplify/data/resource";
 import { getPresignedUrl } from "../Utils";
 import { Link } from "react-router-dom";
 
@@ -30,8 +30,9 @@ function Register() {
           path: `public/${file.name}`,
           data: file,
           options: {
-            onProgress: (progress: any) => {
-              let percentage = (100 * progress.transferredBytes) / progress.totalBytes!;
+            onProgress: (progress) => {
+              if (!progress.totalBytes) return;
+              const percentage = (100 * progress.transferredBytes) / progress.totalBytes;
               console.log(`progress: ${percentage}%`);
             },
           },
@@ -59,28 +60,24 @@ function Register() {
 
   const registerItem = async () => {
     const itemId = new Date().getTime().toString();
-    
-    // 💡 型安全性を高めるため、スキーマから期待される引数型（CreateInput）にキャストするか安全にオブジェクトを作ります
-    const value = {
-      // id: itemId, // 💡 もしresource.tsの a.id() で型エラーが出る場合はここを生かすか、スキーマ側から除外してください
+
+    const value: Schema["PurchaseTable"]["createType"] = {
       PK: "item#" + itemId,
       SK: "#meta#" + itemId,
       type: "item",
       imagefile: dataName,
-      price: parseInt(price) || 0,
-      username: username || "unknown", 
+      price: Number.parseInt(price, 10) || 0,
+      username: username || "unknown",
       description: description,
       isInCart: 0,
       isPurchased: 0,
     };
 
     try {
-      // `as any` キャストを念のため挟むことで、バックエンドスキーマの軽微なオプショナル差分によるクライアントエラーを未然に防ぎます
-      const { data, errors } = await client.models.PurchaseTable.create(value as any);
+      const { data, errors } = await client.models.PurchaseTable.create(value);
       if (errors) throw new Error(JSON.stringify(errors));
       console.log("Registered item successfully:", data);
-      
-      // 登録成功後のステートクリーンアップ
+
       setDescription("");
       setPrice("");
       setIsUrlSet(false);

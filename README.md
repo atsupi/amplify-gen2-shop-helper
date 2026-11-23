@@ -1,6 +1,8 @@
 # Amplify Gen2 Shop Helper
 
-Vite + React (TypeScript) の洗練されたフロントエンド環境と、AWS Amplify Gen2 を組み合わせた、セキュアなユーザー専用高機能タスク管理アプリケーションです。
+[![CI](https://github.com/atsupi/amplify-gen2-shop-helper/actions/workflows/ci.yml/badge.svg)](https://github.com/atsupi/amplify-gen2-shop-helper/actions/workflows/ci.yml)
+
+Vite + React (TypeScript) の洗練されたフロントエンド環境と、AWS Amplify Gen2 を組み合わせた、セキュアなユーザー専用ショッピング・購入管理アプリケーションです。
 
 ## 🚀 概要
 
@@ -20,6 +22,7 @@ Vite + React (TypeScript) の洗練されたフロントエンド環境と、AWS
 - **Build Tool**: Vite 5.x (TypeScript 5.x)
 - **Package Manager**: pnpm 9.x
 - **UI Components**: @aws-amplify/ui-react, @mui/material
+- **Testing & Linter**: Vitest, React Testing Library, ESLint (Flat Config), Prettier
 
 ### バックエンド (AWS Amplify Gen2)
 - **Authentication**: Amazon Cognito
@@ -64,6 +67,24 @@ pnpm run dev
 ```
 起動後、ブラウザで `http://localhost:5173/` にアクセスしてアプリケーションを利用できます。
 
+### 4. テスト・静的解析の実行
+
+品質維持のため、Vitest による単体・コンポーネントテストおよび ESLint / TypeScript による静的解析を導入しています。
+
+```bash
+# 単体・コンポーネントテストの実行
+pnpm test
+
+# カバレッジ計測付きテストの実行
+pnpm run test:coverage
+
+# ESLint による静的解析
+pnpm lint
+
+# TypeScript の型チェック
+pnpm exec tsc --noEmit
+```
+
 ## 📂 ディレクトリ構造
 
 ```text
@@ -75,9 +96,14 @@ amplify-gen2-shop-helper/
 │   │   └── resource.ts       # DynamoDB/AppSync のデータスキーマ、認可ルールの定義
 │   └── backend.ts            # バックエンドリソースの統合定義
 ├── src/                      # フロントエンドソースコード
-│   ├── App.tsx               # アプリのメインロジック（認証ガード、Todo CRUD実装）
+│   ├── components/           # 再利用可能なUIコンポーネント（ShopItem, CartItem 等）
+│   ├── hooks/                # カスタムフック（useUser 等）
+│   ├── pages/                # 各画面コンポーネント（Shop, Cart, Register, Detail 等）
+│   ├── App.tsx               # アプリのメインロジック（認証ガード・ルーティング）
+│   ├── Utils.ts              # Amplify API / Storage 操作ユーティリティ
 │   ├── main.tsx              # エントリーポイント（Amplifyの初期化とマウント）
 │   └── index.css             # グローバルスタイル定義
+├── eslint.config.js          # ESLint (Flat Config) 設定ファイル
 ├── index.html                # Vite エントリーHTML
 ├── vite.config.ts            # Vite 5 / @vitejs/plugin-react の設定
 ├── pnpm-lock.yaml            # pnpm ロックファイル
