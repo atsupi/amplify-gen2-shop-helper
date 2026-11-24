@@ -5,16 +5,17 @@ import Shop from "./Shop";
 import * as Utils from "../Utils";
 import type { PurchaseData } from "../types";
 
-const unsubscribeMock = vi.fn();
+const { unsubscribeMock, subscribeMock } = vi.hoisted(() => ({
+  unsubscribeMock: vi.fn(),
+  subscribeMock: vi.fn(),
+}));
 
 vi.mock("aws-amplify/api", () => ({
   generateClient: () => ({
     models: {
       PurchaseTable: {
         onCreate: () => ({
-          subscribe: () => ({
-            unsubscribe: unsubscribeMock,
-          }),
+          subscribe: subscribeMock,
         }),
       },
     },
@@ -47,9 +48,15 @@ vi.mock("../components/PaginateItems", () => ({
 describe("Shop", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    subscribeMock.mockImplementation((handlers?: { next?: (e: unknown) => void; error?: (e: unknown) => void }) => {
+      handlers?.next?.({ PK: "item#new" });
+      handlers?.error?.(new Error("Subscription mock error"));
+      return { unsubscribe: unsubscribeMock };
+    });
   });
 
   it("商品一覧を取得してカート内件数を集計し、チェック操作で件数を増減できる", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     vi.mocked(Utils.listItems).mockResolvedValue({
       data: {
         purchaseTableByType: {
@@ -95,20 +102,19 @@ describe("Shop", () => {
     expect(screen.getByText("itemsCount: 2")).toBeInTheDocument();
     expect(Utils.listItems).toHaveBeenCalledWith("item");
 
-    // チェックONでカウントが +1 される
     const checkbox = screen.getByLabelText("mock-item-checkbox");
     fireEvent.click(checkbox);
     expect(screen.getByText("To Cart (2)")).toBeInTheDocument();
 
-    // チェックOFFでカウントが -1 される
     fireEvent.click(checkbox);
     expect(screen.getByText("To Cart (1)")).toBeInTheDocument();
 
-    // To Cart ボタンをクリックしてエラーが出ないことを確認
     fireEvent.click(screen.getByRole("button", { name: /To Cart/ }));
+    consoleSpy.mockRestore();
   });
 
   it("アンマウント時にサブスクリプションが解除される", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     vi.mocked(Utils.listItems).mockResolvedValue({
       data: { purchaseTableByType: { items: [] } },
     } as never);
@@ -125,6 +131,7 @@ describe("Shop", () => {
 
     unmount();
     expect(unsubscribeMock).toHaveBeenCalledTimes(1);
+    consoleSpy.mockRestore();
   });
 
   it("listItems がエラーを投げた場合でもクラッシュせず console.error を出力する", async () => {
@@ -144,4 +151,3 @@ describe("Shop", () => {
     consoleSpy.mockRestore();
   });
 });
-
