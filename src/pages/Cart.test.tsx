@@ -179,4 +179,28 @@ describe("Cart", () => {
 
     consoleSpy.mockRestore();
   });
+  it("listItemsInCart と削除時の fetchItem が失敗した場合も console.error を出力する", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(Utils.listItemsInCart).mockRejectedValueOnce(new Error("Load error"));
+
+    const { unmount } = render(<Cart />);
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith("Error loading cart items:", expect.any(Error));
+    });
+    unmount();
+
+    vi.mocked(Utils.listItemsInCart).mockResolvedValueOnce({
+      data: { purchaseTableByIsInCart: { items: [mockCartItems[0]] } },
+    } as never);
+    vi.mocked(Utils.fetchItem).mockRejectedValueOnce(new Error("Delete fetch error"));
+
+    render(<Cart />);
+    fireEvent.click(await screen.findByRole("button", { name: "MockDelete-item#1" }));
+
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith("Error deleting item from cart:", expect.any(Error));
+    });
+
+    consoleSpy.mockRestore();
+  });
 });
