@@ -97,7 +97,6 @@ describe("Register", () => {
       );
     });
 
-    // 登録後にフォームがリセットされることを確認
     await waitFor(() => {
       expect(screen.getByPlaceholderText("No Description")).toHaveValue("");
       expect(screen.getByPlaceholderText("For free")).toHaveValue("");
@@ -168,5 +167,56 @@ describe("Register", () => {
 
     consoleSpy.mockRestore();
   });
-});
 
+  it("uploadData と Cancel 時の remove が失敗した場合も console.error を出力する", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    // 1. uploadData の失敗ケース（48-49行目）
+    vi.mocked(uploadData).mockReturnValueOnce({
+      result: Promise.reject(new Error("Upload failed")),
+    } as never);
+
+    const { container, unmount } = render(
+      <MemoryRouter>
+        <Register />
+      </MemoryRouter>
+    );
+
+    const fileInput = container.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(fileInput, {
+      target: { files: [new File(["dummy"], "fail.png", { type: "image/png" })] },
+    });
+
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith("Upload error:", expect.any(Error));
+    });
+    unmount();
+
+    // 2. Cancel 時の remove 失敗ケース（102-103行目）
+    vi.mocked(uploadData).mockReturnValueOnce({
+      result: Promise.resolve({ path: "public/cancel-fail.png" }),
+    } as never);
+    vi.mocked(Utils.getPresignedUrl).mockResolvedValueOnce("https://example.com");
+    vi.mocked(remove).mockRejectedValueOnce(new Error("Remove failed"));
+
+    const secondRender = render(
+      <MemoryRouter>
+        <Register />
+      </MemoryRouter>
+    );
+
+    const secondFileInput = secondRender.container.querySelector('input[type="file"]') as HTMLInputElement;
+    fireEvent.change(secondFileInput, {
+      target: { files: [new File(["dummy"], "cancel-fail.png", { type: "image/png" })] },
+    });
+    await screen.findByRole("img", { name: "Preview" });
+
+    fireEvent.click(screen.getByRole("button", { name: "Cancel" }));
+
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith("Cancel removal error:", expect.any(Error));
+    });
+
+    consoleSpy.mockRestore();
+  });
+});
