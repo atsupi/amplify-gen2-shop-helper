@@ -152,7 +152,42 @@ describe("DetailList", () => {
     expect(container.querySelector(".DetailItem_wrapper")).toBeNull();
   });
 
-  it("listItems や mutatePurchase でエラーが発生してもクラッシュせず console.error を出力する", async () => {
+  it("mutatePurchase が失敗した場合でもクラッシュせず console.error を出力する", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.mocked(Utils.listItems).mockResolvedValue({
+      data: { purchaseTableByType: { items: [{ PK: "purchase#10", SK: "#meta#10" }] } },
+    } as never);
+    vi.mocked(Utils.listPurchaseItems).mockResolvedValue({
+      data: {
+        listPurchaseTables: {
+          items: [{ type: "pitem", PK: "purchase#10", SK: "item#101", isPurchased: 0 }],
+        },
+      },
+    } as never);
+    vi.mocked(Utils.fetchItem).mockResolvedValue({
+      data: {
+        getPurchaseTable: {
+          id: "prod-101",
+          PK: "item#101",
+          SK: "#meta#101",
+          type: "item",
+          description: "Apple",
+          price: 100,
+        },
+      },
+    } as never);
+    vi.mocked(Utils.mutatePurchase).mockRejectedValue(new Error("Mutate failed"));
+
+    render(<DetailList pindex={1} />);
+    const checkbox = await screen.findByRole("checkbox", { name: "0" });
+    fireEvent.click(checkbox);
+
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalled();
+    });
+    consoleSpy.mockRestore();
+  });
+  it("listItems がエラーを投げた場合でもクラッシュせず console.error を出力する", async () => {
     const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     vi.mocked(Utils.listItems).mockRejectedValue(new Error("List error"));
 
@@ -163,5 +198,5 @@ describe("DetailList", () => {
     });
 
     consoleSpy.mockRestore();
-  });
+  });  
 });
